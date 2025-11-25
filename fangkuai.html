@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>赛博方块 // CYBER TETRIS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700;900&family=Noto+Sans+SC:wght@400;700&family=Long+Cang&display=swap');
+
+        /* --- 主题变量 --- */
+        :root {
+            --bg-color: #050510;
+            --panel-bg: rgba(20, 20, 35, 0.85);
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #00ff41;
+            --neon-yellow: #ffee00;
+            --text-color: #e0e0e0;
+            --grid-line: rgba(255, 255, 255, 0.05);
+            --btn-bg: rgba(255,255,255,0.08);
+            --btn-border: rgba(255,255,255,0.15);
+        }
+
+        body.theme-retro { --bg-color: #2b2b2b; --neon-blue: #8bac0f; --neon-pink: #9bbc0f; --text-color: #9bbc0f; --panel-bg: rgba(40,40,40,0.9); --btn-border: #8bac0f; }
+        body.theme-light { --bg-color: #f0f2f5; --neon-blue: #2196f3; --neon-pink: #e91e63; --text-color: #333; --panel-bg: rgba(255,255,255,0.9); --btn-border: rgba(0,0,0,0.2); }
+        body.theme-royal { --bg-color: #1a0b2e; --neon-blue: #764ba2; --neon-pink: #bf55ec; --text-color: #eebbff; --neon-green: #ffd700; }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            color: var(--text-color);
+            font-family: 'Rajdhani', 'Noto Sans SC', sans-serif;
+            margin: 0;
+            height: 100dvh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            user-select: none; -webkit-user-select: none;
+            padding: 10px 10px 20px 10px;
+            transition: background-color 0.5s;
+        }
+
+        /* --- 启动动画特效 --- */
+        #intro-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        #intro-screen.fade-out { opacity: 0; pointer-events: none; transform: scale(1.1); }
+
+        .scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px; pointer-events: none; z-index: 1;
+        }
+
+        .glitch-title {
+            font-size: 3.5rem; font-weight: 900; color: #fff;
+            position: relative; margin-bottom: 40px;
+            text-shadow: 2px 2px var(--neon-pink), -2px -2px var(--neon-blue);
+            animation: glitch-anim 2s infinite linear alternate-reverse;
+            letter-spacing: 4px; z-index: 2; text-align: center; line-height: 1;
+        }
+        @keyframes glitch-anim {
+            0% { clip-path: inset(80% 0 0 0); transform: translate(-2px, 2px); }
+            20% { clip-path: inset(20% 0 80% 0); transform: translate(2px, -2px); }
+            40% { clip-path: inset(40% 0 20% 0); transform: translate(2px, 2px); }
+            60% { clip-path: inset(10% 0 60% 0); transform: translate(-2px, -2px); }
+            80% { clip-path: inset(30% 0 10% 0); transform: translate(2px, 2px); }
+            100% { clip-path: inset(50% 0 30% 0); transform: translate(-2px, 2px); }
+        }
+
+        .loader-container { width: 200px; height: 6px; background: #222; border-radius: 4px; overflow: hidden; position: relative; z-index: 2; margin-bottom: 20px; }
+        .loader-bar { width: 0%; height: 100%; background: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue); animation: load-progress 2s ease-out forwards; }
+        @keyframes load-progress { 0% { width: 0%; } 40% { width: 30%; } 70% { width: 80%; } 100% { width: 100%; } }
+
+        #start-game-btn {
+            padding: 15px 50px; background: transparent; color: var(--neon-blue);
+            border: 2px solid var(--neon-blue); font-size: 1.5rem; font-weight: bold; font-family: 'Rajdhani', sans-serif;
+            text-transform: uppercase; letter-spacing: 2px; cursor: pointer; position: relative; z-index: 2;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); opacity: 0; animation: btn-appear 0.5s ease-out 2.2s forwards, btn-pulse 2s infinite 2.7s; transition: 0.3s;
+        }
+        #start-game-btn:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 30px var(--neon-blue); }
+        @keyframes btn-appear { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes btn-pulse { 0% { box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); } 50% { box-shadow: 0 0 30px rgba(0, 243, 255, 0.6); } 100% { box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); } }
+
+        .intro-author { margin-top: 30px; font-size: 0.8rem; color: #666; z-index: 2; opacity: 0; animation: fade-in 1s 2.5s forwards; }
+        @keyframes fade-in { to { opacity: 1; } }
+
+        /* --- 游戏界面 --- */
+        .top-bar { display: flex; width: 100%; height: 50px; justify-content: space-between; align-items: center; margin-bottom: 5px; z-index: 5; }
+        .info-container { display: flex; gap: 8px; flex: 1; }
+        .panel { background: var(--panel-bg); padding: 2px 10px; border-radius: 6px; border-left: 3px solid var(--neon-blue); display: flex; flex-direction: column; justify-content: center; min-width: 60px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .panel h3 { margin: 0; font-size: 0.6rem; opacity: 0.7; text-transform: uppercase; }
+        .value { font-size: 1.1rem; font-weight: 700; line-height: 1.1; }
+        .next-panel { width: 80px; height: 100%; display: flex; align-items: center; justify-content: center; border-left: 3px solid var(--neon-pink); background: rgba(0,0,0,0.2); padding: 0; }
+
+        /* 得分特效 */
+        #game-wrapper { flex-grow: 1; display: flex; justify-content: center; align-items: center; position: relative; width: 100%; overflow: hidden; margin-bottom: 5px; }
+        #game-container { position: relative; height: 100%; width: auto; aspect-ratio: 10/20; background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(5px); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 0 20px rgba(0, 0, 0, 0.3); }
+        
+        @keyframes flash-anim { 0% { box-shadow: inset 0 0 0 rgba(255,255,255,0); } 50% { box-shadow: inset 0 0 50px rgba(255,255,255,0.5); border-color: #fff; } 100% { box-shadow: inset 0 0 0 rgba(255,255,255,0); } }
+        .flash-effect { animation: flash-anim 0.3s ease-out; }
+
+        .score-popup {
+            position: absolute;
+            color: #fff; font-size: 2rem; font-weight: 900;
+            text-shadow: 0 0 10px var(--neon-yellow);
+            pointer-events: none; z-index: 15;
+            animation: popup-move 1s ease-out forwards;
+            font-family: 'Rajdhani', sans-serif;
+        }
+        @keyframes popup-move { 0% { opacity: 0; transform: scale(0.5) translateY(0); } 20% { opacity: 1; transform: scale(1.2) translateY(-10px); } 100% { opacity: 0; transform: scale(1) translateY(-50px); } }
+
+        canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+        /* 菜单按钮 */
+        .inner-menu { position: absolute; bottom: 15px; left: 0; width: 100%; padding: 0 15px; display: flex; justify-content: space-between; z-index: 10; pointer-events: none; }
+        .menu-btn { background: var(--panel-bg); border: 1px solid var(--btn-border); color: var(--text-color); font-size: 0.8rem; padding: 6px 12px; border-radius: 12px; cursor: pointer; backdrop-filter: blur(2px); pointer-events: auto; display: flex; align-items: center; gap: 4px; }
+
+        .author-section { width: 100%; height: 50px; display: flex; justify-content: center; align-items: center; margin-bottom: 2px; }
+        .author-badge { width: 90%; height: 100%; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; display: flex; justify-content: center; align-items: center; gap: 12px; }
+        .avatar { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--neon-blue); overflow: hidden; background: #000; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .author-info { display: flex; flex-direction: column; line-height: 1.1; justify-content: center; }
+        .author-label { font-size: 0.6rem; opacity: 0.6; text-transform: uppercase; }
+        .author-name { font-size: 0.9rem; font-weight: bold; letter-spacing: 1px; color: var(--text-color); }
+
+        /* 趣味语录 */
+        .slogan-area {
+            width: 100%; text-align: center;
+            font-family: 'Long Cang', cursive; 
+            font-size: 0.85rem; 
+            color: rgba(255, 255, 255, 0.6); 
+            margin-top: 15px; margin-bottom: 5px; letter-spacing: 1px;
+            text-shadow: 0 0 5px rgba(255,255,255,0.1);
+        }
+
+        .bottom-area { display: flex; flex-direction: column; width: 100%; position: relative; }
+        .bottom-area.gesture-mode { display: none; }
+        .touch-controls { display: flex; width: 100%; justify-content: space-between; padding: 0 5px; align-items: flex-end; }
+        
+        .t-btn { background: var(--btn-bg); border: 1px solid var(--btn-border); border-radius: 16px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: var(--text-color); backdrop-filter: blur(4px); box-shadow: 0 4px 0 rgba(0,0,0,0.3); transition: transform 0.05s, box-shadow 0.05s; }
+        .t-btn:active { transform: translateY(4px); box-shadow: none; border-color: var(--neon-blue); }
+        
+        .group-move { display: grid; grid-template-columns: repeat(3, auto); grid-template-rows: auto auto; gap: 8px; align-items: end; }
+        .btn-move { width: 72px; height: 72px; } 
+
+        .pos-left { grid-column: 1; grid-row: 2; border-radius: 16px 8px 8px 16px; }
+        .pos-down { grid-column: 2; grid-row: 2; border-bottom: 4px solid var(--neon-pink); font-size: 1rem; font-weight: bold; color: var(--neon-pink); border-color: rgba(255, 0, 255, 0.4); }
+        .pos-right { grid-column: 3; grid-row: 2; border-radius: 8px 16px 16px 8px; }
+        .move-placeholder { grid-column: 2; grid-row: 1; height: 1px;}
+
+        .group-action { display: flex; align-items: flex-end; position: relative; padding-right: 5px; height: 140px; }
+        .btn-rotate { width: 85px; height: 85px; border-radius: 50%; border: 2px solid var(--neon-blue); font-size: 2.2rem; }
+
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; border-radius: 8px; visibility: hidden; opacity: 0; transition: 0.2s; }
+        .overlay.active { visibility: visible; opacity: 1; }
+        .overlay h2 { color: var(--neon-blue); margin-bottom: 20px; font-size: 2rem; }
+        .settings-scroll { width: 100%; max-height: 60%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 0 20px; }
+        .setting-group { width: 100%; max-width: 320px; margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; }
+        .setting-title { font-size: 0.8rem; color: #888; margin-bottom: 8px; display: block; }
+        .setting-options { display: flex; gap: 5px; flex-wrap: wrap; }
+        .toggle-btn { flex: 1; background: transparent; border: 1px solid #555; color: #aaa; padding: 8px 5px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; min-width: 60px; text-align: center; }
+        .toggle-btn.active { background: var(--neon-blue); color: #000; border-color: var(--neon-blue); font-weight: bold; }
+        .btn-close { padding: 12px 60px; background: transparent; border: 1px solid var(--text-color); color: var(--text-color); border-radius: 30px; font-size: 1.2rem; margin-top: 20px; cursor: pointer; }
+        #gesture-zone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: none; }
+        #timer-display { display: none; }
+    </style>
+</head>
+<body class="theme-cyber">
+
+<!-- 启动动画 -->
+<div id="intro-screen">
+    <div class="scanlines"></div>
+    <div class="glitch-title" data-text="CYBER TETRIS">CYBER<br>TETRIS</div>
+    <div class="loader-container"><div class="loader-bar"></div></div>
+    <button id="start-game-btn" onclick="startGameSequence()">SYSTEM START</button>
+    <div class="intro-author">Designed by 清晨制作</div>
+</div>
+
+<!-- 顶部栏 -->
+<div class="top-bar">
+    <div class="info-container">
+        <div class="panel" style="border-left-color: var(--neon-pink);">
+            <h3>Score</h3>
+            <div class="value" id="score">0</div>
+        </div>
+        <div class="panel" style="border-left-color: var(--neon-yellow);">
+            <h3>Best</h3>
+            <div class="value" id="high-score">0</div>
+        </div>
+        <div class="panel" style="border-left-color: var(--neon-green);">
+            <h3 id="level-label">Level</h3>
+            <div class="value" id="level">1</div>
+        </div>
+        <div class="panel" id="timer-panel" style="display:none; border-left-color: var(--neon-blue);">
+            <h3>Time</h3>
+            <div class="value" id="timer-val">120</div>
+        </div>
+    </div>
+    <div class="panel next-panel">
+        <canvas id="next-piece-canvas" width="80" height="50"></canvas>
+    </div>
+</div>
+
+<!-- 游戏区 -->
+<div id="game-wrapper">
+    <div id="game-container">
+        <canvas id="tetris" width="240" height="400"></canvas>
+        <div id="gesture-zone"></div>
+
+        <div class="inner-menu">
+            <button class="menu-btn" onclick="openSettings()">⚙ 设置</button>
+            <button class="menu-btn" onclick="togglePause()">暂停 II</button>
+        </div>
+
+        <div id="overlay-msg" class="overlay">
+            <h2 id="msg-title">PAUSED</h2>
+            <div id="settings-content" class="settings-scroll" style="display:none;">
+                <div class="setting-group">
+                    <span class="setting-title">游戏模式</span>
+                    <div class="setting-options">
+                        <button class="toggle-btn active" onclick="setSetting('mode', 'classic', this)">经典</button>
+                        <button class="toggle-btn" onclick="setSetting('mode', 'timer', this)">限时</button>
+                        <button class="toggle-btn" onclick="setSetting('mode', 'survival', this)">生存</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <span class="setting-title">游戏音效</span>
+                    <div class="setting-options">
+                        <button class="toggle-btn active" id="btn-sound-on" onclick="setSetting('sound', true, this)">开启</button>
+                        <button class="toggle-btn" id="btn-sound-off" onclick="setSetting('sound', false, this)">关闭</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <span class="setting-title">困难级别</span>
+                    <div class="setting-options">
+                        <button class="toggle-btn" onclick="setSetting('diff', 'easy', this)">简单</button>
+                        <button class="toggle-btn active" onclick="setSetting('diff', 'normal', this)">普通</button>
+                        <button class="toggle-btn" onclick="setSetting('diff', 'hard', this)">困难</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <span class="setting-title">界面主题</span>
+                    <div class="setting-options">
+                        <button class="toggle-btn active" onclick="setSetting('theme', 'theme-cyber', this)">赛博</button>
+                        <button class="toggle-btn" onclick="setSetting('theme', 'theme-retro', this)">复古</button>
+                        <button class="toggle-btn" onclick="setSetting('theme', 'theme-light', this)">白昼</button>
+                        <button class="toggle-btn" onclick="setSetting('theme', 'theme-royal', this)">紫金</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <span class="setting-title">操控方式</span>
+                    <div class="setting-options">
+                        <button class="toggle-btn active" id="btn-touch" onclick="setSetting('control', 'touch', this)">按键</button>
+                        <button class="toggle-btn" id="btn-gesture" onclick="setSetting('control', 'gesture', this)">手势</button>
+                    </div>
+                </div>
+            </div>
+            <div id="final-score-area" style="display:none; text-align:center;">
+                <p style="color:#aaa; font-size:1rem;">FINAL SCORE</p>
+                <p id="final-score-display" style="color:#fff; font-size:2.5rem; margin:10px 0; font-weight:bold;">0</p>
+            </div>
+            <button class="btn-close" id="msg-btn" onclick="resumeOrRestart()">CONTINUE</button>
+        </div>
+    </div>
+</div>
+
+<!-- 作者署名区 -->
+<div class="author-section">
+    <div class="author-badge">
+        <div class="avatar"><img src="https://img.lenyiin.com/app/hide.php?key=SDF1c3dDMERMZy9zcWtGUmpCN3BXcG53eVhNbXNmaC9TNXZFakswPQ==
+" alt="Avatar"></div>
+        <div class="author-info">
+            <span class="author-label">Created by</span>
+            <span class="author-name">清晨制作</span>
+        </div>
+    </div>
+</div>
+
+<!-- 趣味语录 -->
+<div class="slogan-area">
+    玩着俄罗斯的方块，想着俄罗斯的妹子👱🏻‍♀️
+</div>
+
+<!-- 底部控制区 -->
+<div class="bottom-area" id="bottom-area">
+    <div class="touch-controls" id="touch-panel">
+        <div class="group-move">
+            <div class="move-placeholder"></div>
+            <div class="t-btn btn-move pos-left" ontouchstart="btnAction(event, 'left')" onmousedown="btnAction(event, 'left')">←</div>
+            <div class="t-btn btn-move pos-down" ontouchstart="btnAction(event, 'drop')" onmousedown="btnAction(event, 'drop')">DROP</div>
+            <div class="t-btn btn-move pos-right" ontouchstart="btnAction(event, 'right')" onmousedown="btnAction(event, 'right')">→</div>
+        </div>
+        <div class="group-action">
+            <div class="t-btn btn-rotate" ontouchstart="btnAction(event, 'rotate')" onmousedown="btnAction(event, 'rotate')">↻</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 音效管理器 (Web Audio API) ---
+    const Sound = {
+        ctx: null,
+        enabled: true,
+        init: function() {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        },
+        play: function(type) {
+            if (!this.enabled || !this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            switch (type) {
+                case 'boot': // 启动音效：涡轮加速感
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(100, now);
+                    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.6); // 快速升调
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                    
+                    // 叠加一个高频提示音
+                    const osc2 = this.ctx.createOscillator();
+                    const gain2 = this.ctx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(this.ctx.destination);
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(1800, now + 0.5);
+                    gain2.gain.setValueAtTime(0, now + 0.5);
+                    gain2.gain.linearRampToValueAtTime(0.2, now + 0.55);
+                    gain2.gain.linearRampToValueAtTime(0, now + 0.8);
+                    osc2.start(now + 0.5);
+                    osc2.stop(now + 0.8);
+                    break;
+
+                case 'move':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                    break;
+                case 'rotate':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.linearRampToValueAtTime(600, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                    break;
+                case 'drop':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                    break;
+                case 'clear': // 得分特效音
+                    const t = now;
+                    // 播放一串快速的上行音阶
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                        const o = this.ctx.createOscillator();
+                        const g = this.ctx.createGain();
+                        o.connect(g);
+                        g.connect(this.ctx.destination);
+                        o.type = 'square';
+                        o.frequency.value = freq;
+                        g.gain.setValueAtTime(0.1, t + i*0.06);
+                        g.gain.exponentialRampToValueAtTime(0.01, t + i*0.06 + 0.1);
+                        o.start(t + i*0.06);
+                        o.stop(t + i*0.06 + 0.1);
+                    });
+                    break;
+                case 'gameover':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.linearRampToValueAtTime(50, now + 1);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 1);
+                    osc.start(now);
+                    osc.stop(now + 1);
+                    break;
+            }
+        }
+    };
+
+    const canvas = document.getElementById('tetris');
+    const ctx = canvas.getContext('2d');
+    const nextCanvas = document.getElementById('next-piece-canvas');
+    const nextCtx = nextCanvas.getContext('2d');
+
+    const scale = 24; 
+    ctx.scale(scale, 20); 
+    nextCtx.scale(20, 16); 
+
+    const ROWS = 20; const COLS = 10;
+    const COLORS = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
+    const PIECES = [[], [[0,1,0],[1,1,1],[0,0,0]], [[2,0,0],[2,2,2],[0,0,0]], [[0,0,3],[3,3,3],[0,0,0]], [[4,4],[4,4]], [[0,5,5],[5,5,0],[0,0,0]], [[6,6,0],[0,6,6],[0,0,0]], [[0,0,0,0],[7,7,7,7],[0,0,0,0],[0,0,0,0]]];
+
+    const settings = { mode: 'classic', diff: 'normal', theme: 'theme-cyber', control: 'touch', sound: true };
+    
+    const arena = createMatrix(COLS, ROWS);
+    const player = { pos: {x: 0, y: 0}, matrix: null, score: 0 };
+    let dropCounter = 0; let dropInterval = 1000; let lastTime = 0;
+    let score = 0; let level = 1; let highScore = localStorage.getItem('tetris_highscore') || 0;
+    let isGameOver = false; let isPaused = true; 
+    let nextPiece = null;
+    let timeLeft = 120; 
+    let timerInterval = null;
+    let gameHasStarted = false;
+
+    document.getElementById('high-score').innerText = highScore;
+
+    // --- 启动动画逻辑 ---
+    function startGameSequence() {
+        if(gameHasStarted) return;
+        gameHasStarted = true;
+        Sound.init(); 
+        Sound.play('boot'); // 播放启动音
+        if(navigator.vibrate) navigator.vibrate(20);
+        const intro = document.getElementById('intro-screen');
+        intro.classList.add('fade-out');
+        setTimeout(() => {
+            intro.style.display = 'none';
+            resetGame();
+        }, 800);
+    }
+
+    function createMatrix(w, h) { const m=[]; while(h--) m.push(new Array(w).fill(0)); return m; }
+    function vibrate() { if (navigator.vibrate) navigator.vibrate(5); }
+
+    function btnAction(e, action) {
+        if(e.cancelable) e.preventDefault();
+        if(isPaused || isGameOver || !gameHasStarted) return;
+        vibrate();
+        switch(action) {
+            case 'left': playerMove(-1); Sound.play('move'); break;
+            case 'right': playerMove(1); Sound.play('move'); break;
+            case 'drop': playerHardDrop(); Sound.play('drop'); break;
+            case 'rotate': playerRotate(1); Sound.play('rotate'); break;
+        }
+    }
+
+    function getRandomPiece() {
+        const types = 'ILJOTSZ'; const type = types[types.length * Math.random() | 0];
+        let idx = 1; 
+        if(type=='T') idx=1; else if(type=='L') idx=2; else if(type=='J') idx=3; else if(type=='O') idx=4; else if(type=='S') idx=5; else if(type=='Z') idx=6; else if(type=='I') idx=7;
+        const matrix = PIECES[idx].map(row => [...row]);
+        matrix.forEach(r => r.forEach((v, x) => { if(v) r[x] = idx; }));
+        return { matrix, idx };
+    }
+
+    function draw() {
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawMatrix(arena, {x:0,y:0}, ctx);
+        if(player.matrix) drawMatrix(player.matrix, player.pos, ctx);
+    }
+
+    function drawMatrix(matrix, offset, context) {
+        matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    if(settings.theme === 'theme-retro') {
+                        context.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+                        const px = x + offset.x; const py = y + offset.y;
+                        context.fillRect(px+0.05, py+0.05, 0.9, 0.9);
+                        context.strokeRect(px+0.1, py+0.1, 0.7, 0.7);
+                    } else {
+                        const color = COLORS[value];
+                        const px = x + offset.x; const py = y + offset.y;
+                        context.fillStyle = color; 
+                        context.fillRect(px+0.05, py+0.05, 0.9, 0.9);
+                        context.fillStyle = 'rgba(255,255,255,0.3)'; context.fillRect(px+0.05, py+0.05, 0.9, 0.2);
+                        context.fillStyle = 'rgba(0,0,0,0.1)'; context.fillRect(px+0.05, py+0.75, 0.9, 0.2);
+                    }
+                }
+            });
+        });
+    }
+
+    function collide(arena, player) {
+        const [m, o] = [player.matrix, player.pos];
+        for (let y = 0; y < m.length; ++y) {
+            for (let x = 0; x < m[y].length; ++x) {
+                if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true;
+            }
+        }
+        return false;
+    }
+
+    function merge(arena, player) {
+        player.matrix.forEach((row, y) => {
+            row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; });
+        });
+    }
+
+    function rotate(matrix, dir) {
+        for(let y=0; y<matrix.length; ++y) for(let x=0; x<y; ++x) [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+        if(dir>0) matrix.forEach(row => row.reverse()); else matrix.reverse();
+    }
+
+    function playerRotate(dir) {
+        const pos = player.pos.x; let offset = 1; rotate(player.matrix, dir);
+        while(collide(arena, player)) {
+            player.pos.x += offset; offset = -(offset + (offset>0?1:-1));
+            if(offset > player.matrix[0].length) { rotate(player.matrix, -dir); player.pos.x=pos; return; }
+        }
+    }
+
+    function playerMove(dir) { player.pos.x += dir; if(collide(arena, player)) player.pos.x -= dir; }
+    
+    function playerReset() {
+        if(!nextPiece) nextPiece = getRandomPiece();
+        player.matrix = nextPiece.matrix;
+        nextPiece = getRandomPiece();
+        nextCtx.clearRect(0,0,nextCanvas.width, nextCanvas.height);
+        const ox = (4 - nextPiece.matrix[0].length)/2; const oy = (3 - nextPiece.matrix.length)/2;
+        drawMatrix(nextPiece.matrix, {x:ox, y:oy}, nextCtx);
+        player.pos.y = 0; player.pos.x = (arena[0].length/2|0) - (player.matrix[0].length/2|0);
+        if(collide(arena, player)) { 
+            isGameOver = true; 
+            Sound.play('gameover');
+            updateHighScore();
+            showOverlay('GAME OVER'); 
+        }
+    }
+
+    function playerDrop() {
+        player.pos.y++;
+        if(collide(arena, player)) {
+            player.pos.y--; merge(arena, player); playerReset(); arenaSweep();
+        }
+        dropCounter = 0;
+    }
+
+    function playerHardDrop() {
+        while(!collide(arena, player)) player.pos.y++;
+        player.pos.y--; merge(arena, player); playerReset(); arenaSweep(); dropCounter=0;
+    }
+
+    // --- 得分特效逻辑 ---
+    function triggerScoreEffect(amount) {
+        Sound.play('clear');
+        const container = document.getElementById('game-container');
+        container.classList.remove('flash-effect');
+        void container.offsetWidth; 
+        container.classList.add('flash-effect');
+        
+        const popup = document.createElement('div');
+        popup.className = 'score-popup';
+        popup.innerText = '+' + amount;
+        const left = 50 + (Math.random() * 40 - 20);
+        const top = 40 + (Math.random() * 20 - 10);
+        popup.style.left = left + '%';
+        popup.style.top = top + '%';
+        document.getElementById('game-container').appendChild(popup);
+        setTimeout(() => popup.remove(), 1000);
+    }
+
+    function updateHighScore() {
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('tetris_highscore', highScore);
+            document.getElementById('high-score').innerText = highScore;
+        }
+    }
+
+    function arenaSweep() {
+        let rowCount = 0;
+        outer: for(let y=arena.length-1; y>0; --y) {
+            for(let x=0; x<arena[y].length; ++x) if(arena[y][x] === 0) continue outer;
+            const row = arena.splice(y, 1)[0].fill(0); arena.unshift(row); ++y; rowCount++;
+        }
+        if(rowCount > 0) {
+            const multi = settings.diff === 'hard' ? 1.5 : (settings.diff === 'easy' ? 0.8 : 1);
+            const gainedScore = Math.floor(rowCount * 100 * level * multi * rowCount); 
+            score += gainedScore;
+            triggerScoreEffect(gainedScore);
+            updateHighScore();
+
+            if (settings.mode === 'classic') level = Math.floor(score/1000) + 1;
+            document.getElementById('score').innerText = score;
+            document.getElementById('level').innerText = level;
+            updateSpeed();
+        }
+    }
+
+    function updateSpeed() {
+        let baseSpeed = 1000;
+        if (settings.mode === 'survival') baseSpeed = 400;
+        if (settings.diff === 'hard') baseSpeed -= 200;
+        if (settings.diff === 'easy') baseSpeed += 200;
+        dropInterval = Math.max(50, baseSpeed - (level-1) * (settings.mode==='survival' ? 20 : 50));
+    }
+
+    function startTimer() {
+        if (settings.mode !== 'timer') return;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if(isPaused || isGameOver) return;
+            timeLeft--;
+            document.getElementById('timer-val').innerText = timeLeft;
+            if(timeLeft <= 0) {
+                isGameOver = true;
+                Sound.play('gameover');
+                updateHighScore();
+                showOverlay('TIME UP');
+                clearInterval(timerInterval);
+            }
+        }, 1000);
+    }
+
+    function update(time = 0) {
+        if(isPaused) return; 
+        const dt = time - lastTime; lastTime = time;
+        if(!isGameOver) {
+            dropCounter += dt;
+            if(dropCounter > dropInterval) playerDrop();
+        }
+        draw();
+        if(!isGameOver) requestAnimationFrame(update);
+    }
+
+    const overlay = document.getElementById('overlay-msg');
+    const msgTitle = document.getElementById('msg-title');
+    const msgBtn = document.getElementById('msg-btn');
+    const settingsContent = document.getElementById('settings-content');
+    const finalScoreArea = document.getElementById('final-score-area');
+
+    function setSetting(type, value, btn) {
+        const group = btn.parentElement;
+        group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        settings[type] = value;
+        if (type === 'theme') document.body.className = value;
+        else if (type === 'control') toggleControlUI(value);
+        else if (type === 'sound') Sound.enabled = value;
+    }
+
+    function toggleControlUI(mode) {
+        const touchPanel = document.getElementById('touch-panel');
+        const gestureZone = document.getElementById('gesture-zone');
+        const bottomArea = document.getElementById('bottom-area');
+        const authorSection = document.querySelector('.author-section');
+        const sloganArea = document.querySelector('.slogan-area');
+
+        if (mode === 'touch') {
+            touchPanel.style.display = 'flex'; gestureZone.style.display = 'none';
+            bottomArea.classList.remove('gesture-mode');
+            authorSection.style.display = 'flex'; sloganArea.style.display = 'block';
+        } else {
+            touchPanel.style.display = 'none'; gestureZone.style.display = 'block';
+            bottomArea.classList.add('gesture-mode');
+        }
+    }
+
+    function showOverlay(title, isSettings = false) {
+        isPaused = true;
+        msgTitle.innerText = title;
+        overlay.classList.add('active');
+        if (title === 'GAME OVER' || title === 'TIME UP') {
+            settingsContent.style.display = 'none'; finalScoreArea.style.display = 'block';
+            document.getElementById('final-score-display').innerText = score;
+            msgBtn.innerText = 'RESTART'; msgBtn.onclick = resetGame;
+        } else if (isSettings) {
+            settingsContent.style.display = 'flex'; finalScoreArea.style.display = 'none';
+            msgBtn.innerText = 'RESUME'; msgBtn.onclick = resumeOrRestart;
+        } else {
+            settingsContent.style.display = 'none'; finalScoreArea.style.display = 'none';
+            msgBtn.innerText = 'RESUME'; msgBtn.onclick = resumeOrRestart;
+        }
+    }
+
+    function togglePause() { if(isGameOver || !gameHasStarted) return; if(!isPaused) showOverlay('PAUSED'); else resumeOrRestart(); }
+    function openSettings() { if(!gameHasStarted) return; if(!isPaused) isPaused = true; showOverlay('SETTINGS', true); }
+    function resumeOrRestart() { overlay.classList.remove('active'); isPaused = false; lastTime = performance.now(); requestAnimationFrame(update); }
+
+    function resetGame() {
+        arena.forEach(r => r.fill(0)); score = 0; level = 1; isGameOver = false; isPaused = false;
+        if(settings.mode === 'timer') {
+            timeLeft = 120;
+            document.getElementById('timer-panel').style.display = 'flex';
+            document.getElementById('timer-val').innerText = timeLeft;
+            startTimer();
+        } else {
+            document.getElementById('timer-panel').style.display = 'none';
+            clearInterval(timerInterval);
+        }
+        updateSpeed();
+        document.getElementById('score').innerText = 0; document.getElementById('level').innerText = 1;
+        playerReset(); 
+        lastTime = performance.now();
+        requestAnimationFrame(update);
+    }
+
+    let touchStartX = 0; let touchStartY = 0;
+    const gestureZone = document.getElementById('gesture-zone');
+    gestureZone.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; e.preventDefault(); }, {passive: false});
+    gestureZone.addEventListener('touchend', e => {
+        if(isPaused || isGameOver) return;
+        const diffX = e.changedTouches[0].screenX - touchStartX;
+        const diffY = e.changedTouches[0].screenY - touchStartY;
+        if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) playerRotate(1);
+        else if (Math.abs(diffX) > Math.abs(diffY)) { if (diffX > 30) playerMove(1); else if (diffX < -30) playerMove(-1); }
+        else { if (diffY > 30) playerDrop(); else if (diffY < -30) playerHardDrop(); }
+        e.preventDefault();
+    });
+
+    document.addEventListener('keydown', e => {
+        if(isGameOver || !gameHasStarted) return;
+        if(e.key === 'ArrowLeft') { playerMove(-1); Sound.play('move'); }
+        else if(e.key === 'ArrowRight') { playerMove(1); Sound.play('move'); }
+        else if(e.key === 'ArrowDown') { playerDrop(); Sound.play('move'); } 
+        else if(e.key === 'ArrowUp') { playerRotate(1); Sound.play('rotate'); }
+        else if(e.key === ' ') { playerHardDrop(); Sound.play('drop'); }
+        else if(e.key.toLowerCase() === 'p') togglePause();
+    });
+</script>
+</body>
+</html>
