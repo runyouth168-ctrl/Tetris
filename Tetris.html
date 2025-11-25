@@ -72,7 +72,7 @@
 
         /* --- 游戏核心区 --- */
         #game-wrapper {
-            flex-grow: 1; /* 自动占据剩余空间 */
+            flex-grow: 1;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -96,7 +96,7 @@
 
         canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
 
-        /* 菜单按钮 (悬浮在游戏区内部右下角，符合截图) */
+        /* 菜单按钮 (悬浮在游戏区内部右下角) */
         .inner-menu {
             position: absolute;
             bottom: 10px;
@@ -117,32 +117,27 @@
             backdrop-filter: blur(2px);
         }
 
-        /* --- 作者署名区 (独立层级 - 您指定的红框位置) --- */
+        /* --- 作者署名区 (静止样式) --- */
         .author-section {
             width: 100%;
-            height: 50px; /* 固定高度，确保不被压缩 */
+            height: 50px;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 5px; /* 与下方按键隔开 */
+            margin-bottom: 5px;
         }
 
         .author-badge {
-            width: 90%; /* 占据大部分宽度，类似红框 */
+            width: 90%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.03); /* 纯静止背景 */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* 静止边框 */
             border-radius: 8px;
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 12px;
-            animation: borderPulse 4s infinite;
-        }
-
-        @keyframes borderPulse {
-            0%, 100% { border-color: rgba(255,255,255,0.05); box-shadow: none; }
-            50% { border-color: var(--neon-pink); box-shadow: 0 0 10px rgba(255, 0, 255, 0.1); }
+            /* 移除了动画 */
         }
 
         .avatar { 
@@ -167,7 +162,7 @@
             position: relative;
         }
 
-        .bottom-area.gesture-mode { display: none; } /* 手势模式隐藏按键 */
+        .bottom-area.gesture-mode { display: none; }
 
         /* 虚拟按键面板 */
         .touch-controls {
@@ -292,7 +287,7 @@
         <canvas id="tetris" width="240" height="400"></canvas>
         <div id="gesture-zone"></div>
 
-        <!-- 菜单按钮 (移到游戏画面内部右下角) -->
+        <!-- 菜单按钮 -->
         <div class="inner-menu">
             <button class="menu-btn" onclick="togglePause()">暂停 II</button>
             <button class="menu-btn" onclick="openSettings()">设置 ⚙</button>
@@ -318,7 +313,7 @@
     </div>
 </div>
 
-<!-- 作者署名区 (独立层级，位于红框位置) -->
+<!-- 作者署名区 (静止) -->
 <div class="author-section">
     <div class="author-badge">
         <div class="avatar"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=QingChen&backgroundColor=050510" alt="Avatar"></div>
@@ -355,7 +350,7 @@
     const nextCtx = nextCanvas.getContext('2d');
 
     ctx.scale(24, 20); 
-    nextCtx.scale(20, 16); // 调整next画布缩放
+    nextCtx.scale(20, 16); 
 
     const ROWS = 20; const COLS = 10;
     const COLORS = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
@@ -397,12 +392,7 @@
     function draw() {
         ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         drawMatrix(arena, {x:0,y:0}, ctx);
-        if (!isGameOver && !isPaused) {
-            const ghost = {...player.pos};
-            while(!collide(arena, {pos:ghost, matrix:player.matrix})) ghost.y++;
-            ghost.y--;
-            drawMatrix(player.matrix, ghost, ctx, true);
-        }
+        // 已移除幽灵方块逻辑 (Ghost Piece)
         drawMatrix(player.matrix, player.pos, ctx);
     }
 
@@ -550,12 +540,11 @@
             touchPanel.style.display = 'flex'; gestureZone.style.display = 'none';
             bottomArea.classList.remove('gesture-mode');
             btnTouch.classList.add('active'); btnGesture.classList.remove('active');
-            authorSection.style.display = 'flex'; // 显示作者栏
+            authorSection.style.display = 'flex'; 
         } else {
             touchPanel.style.display = 'none'; gestureZone.style.display = 'block';
             bottomArea.classList.add('gesture-mode');
             btnTouch.classList.remove('active'); btnGesture.classList.add('active');
-            // 手势模式下也可以保留作者栏，或者选择隐藏
         }
     }
 
